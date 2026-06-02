@@ -14,6 +14,10 @@ if [ -f "$INSTALL_DIR/electron/electron" ]; then
     ELECTRON_BIN="$INSTALL_DIR/electron/electron"
 fi
 
+# Some shells or developer environments export this for Electron tooling. If it
+# leaks into the launcher, Electron behaves like Node and cannot load the app.
+unset ELECTRON_RUN_AS_NODE
+
 # --- SEMVER COMPARE ---
 # Returns 0 if $1 < $2
 version_lt() {
@@ -95,8 +99,4 @@ fi
 
 # --- RUN APP ---
 echo "[*] Launching with Electron $ELECTRON_VERSION..."
-ELECTRON_ENABLE_LOGGING=1 "$ELECTRON_BIN" \
-    --gtk-version=3 \
-    --enable-features=UseGtkFileChooser \
-    --xdg-portal-required-version=999 \
-    "$INSTALL_DIR"
+ELECTRON_ENABLE_LOGGING=1 "$ELECTRON_BIN" "$INSTALL_DIR"
