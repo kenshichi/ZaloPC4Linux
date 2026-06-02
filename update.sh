@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # --- CONFIG ---
-REPO_URL="https://github.com/realdtn2/zalo-linux-2026"
+REPO_URL="https://github.com/kenshichi/ZaloPC4Linux"
 INSTALL_DIR="$HOME/.local/share/zalo"
 TMP_DIR="/tmp/zalo-update-$$"
 FIFO="/tmp/zalo-update-$$.fifo"
-VERSION_URL="https://raw.githubusercontent.com/realdtn2/zalo-linux-2026/latest/version.txt"
+VERSION_URL="https://raw.githubusercontent.com/kenshichi/ZaloPC4Linux/latest/version.txt"
 DEFAULT_EXCLUDE_LIST=".git .github .gitignore .agents .codex install.sh reverse-engineering generate-addon.py dist build-appimage.sh README.md COMPREHENSIVE_ANALYSIS.md"
 
 # --- CLEANUP TRAP ---
