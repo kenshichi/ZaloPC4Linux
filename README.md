@@ -16,6 +16,27 @@ The port was created by:
 
 > Note: Newer versions of Electron cause errors — v22.3.27 is required.
 
+## Requirements
+
+- Linux x86_64 distribution with glibc (Linux Mint Cinnamon, Ubuntu, Debian, Fedora, Arch, openSUSE, and similar desktop distributions)
+- `wget`, `unzip`, `curl`, `git`, `zenity`, and `yad`
+- System libraries required by the bundled native modules:
+  - `libstdc++`
+  - `libgcc_s`
+  - `libc`
+  - `libm`
+  - `liblzma.so.5`
+  - `libcrypto.so.3`
+- Internet access for the first launch, because Electron v22.3.27 is downloaded automatically if it is not already available
+
+On Debian/Ubuntu/Linux Mint:
+```bash
+sudo apt-get update
+sudo apt-get install -y wget unzip curl git zenity yad liblzma5 libssl3
+```
+
+Building the AppImage additionally requires `wget` and `unzip`.
+
 ## Installation
 
 ### Option 1: Install script
