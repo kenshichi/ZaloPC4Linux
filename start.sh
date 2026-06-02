@@ -95,4 +95,8 @@ fi
 
 # --- RUN APP ---
 echo "[*] Launching with Electron $ELECTRON_VERSION..."
-ELECTRON_ENABLE_LOGGING=1 "$ELECTRON_BIN" "$INSTALL_DIR"
+ELECTRON_ENABLE_LOGGING=1 "$ELECTRON_BIN" \
+    --gtk-version=3 \
+    --enable-features=UseGtkFileChooser \
+    --xdg-portal-required-version=999 \
+    "$INSTALL_DIR"

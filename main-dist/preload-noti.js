@@ -5243,7 +5243,18 @@ __ZaBUNDLENAME__ = "preload-noti", __SCRIPT_TYPE__ = "preload",
                     },
                     getClipboardImagePNG: () => {
                         let e = r.clipboard.readImage();
-                        if (e.isEmpty()) { try { const buf = r.clipboard.readBuffer("image/png"); if (buf && buf.length > 0) { e = r.nativeImage.createFromBuffer(buf); } } catch(_) {} }
+                        if (e.isEmpty()) {
+                            const mimeTypes = ["image/png", "image/jpeg", "image/jpg", "image/bmp", "image/x-bmp", "image/x-MS-bmp", "image/gif"];
+                            for (const mime of mimeTypes) {
+                                try {
+                                    const buf = r.clipboard.readBuffer(mime);
+                                    if (buf && buf.length > 0) {
+                                        e = r.nativeImage.createFromBuffer(buf);
+                                        if (!e.isEmpty()) break;
+                                    }
+                                } catch(_) {}
+                            }
+                        }
                         if (e.isEmpty()) return null;
                         return e.toPNG().toString('base64');
                     },
@@ -5262,7 +5273,18 @@ __ZaBUNDLENAME__ = "preload-noti", __SCRIPT_TYPE__ = "preload",
                         try {
                             const _fs = require('fs'), _os = require('os'), _path = require('path');
                             let e = r.clipboard.readImage();
-                            if (e.isEmpty()) { try { const buf = r.clipboard.readBuffer("image/png"); if (buf && buf.length > 0) { e = r.nativeImage.createFromBuffer(buf); } } catch(_) {} }
+                            if (e.isEmpty()) {
+                                const mimeTypes = ["image/png", "image/jpeg", "image/jpg", "image/bmp", "image/x-bmp", "image/x-MS-bmp", "image/gif"];
+                                for (const mime of mimeTypes) {
+                                    try {
+                                        const buf = r.clipboard.readBuffer(mime);
+                                        if (buf && buf.length > 0) {
+                                            e = r.nativeImage.createFromBuffer(buf);
+                                            if (!e.isEmpty()) break;
+                                        }
+                                    } catch(_) {}
+                                }
+                            }
                             if (e.isEmpty()) return null;
                             const tmpPath = _path.join(_os.tmpdir(), "zalo_clip_" + Date.now() + ".png");
                             _fs.writeFileSync(tmpPath, e.toPNG());

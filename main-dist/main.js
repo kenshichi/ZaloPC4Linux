@@ -13735,11 +13735,11 @@ __ZaBUNDLENAME__ = "main", __SCRIPT_TYPE__ = "main",
                         } catch (n) {
                             c.zsymb(18, "vbJHSD", n)
                         }
-                        e.sender.session.cookies.flushStore().then((() => {
-                            c.zsymb(18, "5VIljR", "cookie: done flush store")
-                        })).catch((e => {
-                            c.zsymb(18, "aoUf-a", e)
-                        }))
+                        try {
+                            await e.sender.session.cookies.flushStore(), c.zsymb(18, "5VIljR", "cookie: done flush store")
+                        } catch (n) {
+                            c.zsymb(18, "aoUf-a", n)
+                        }
                     },
                     clearHostResolverCache: e => d.fromPartition("persist:zalo").clearHostResolverCache(),
                     clearSessionStorageData: (e, t) => d.fromPartition("persist:zalo").clearStorageData({
@@ -40074,6 +40074,57 @@ __ZaBUNDLENAME__ = "main", __SCRIPT_TYPE__ = "main",
                 d = n("3t1t"),
                 l = n("Hfa6");
             const u = Object(a.a)("window-operation-handler", ["ipc-preload"]),
+                YAD_CP = n("QduZ"),
+                YAD_PATH = n("oyvS"),
+                YAD_FS = n("mw/K"),
+                YAD_EXEC = (e, t, n) => new Promise(((r, i) => {
+                    YAD_CP.execFile(e, t, n, ((e, t, n) => e ? (e.stdout = t, e.stderr = n, i(e)) : r({
+                        stdout: t,
+                        stderr: n
+                    })))
+                })),
+                YAD_IS_IMG_FILTER = e => !!(e && e.filters && e.filters.some((e => {
+                    const t = (null == e ? void 0 : e.extensions) || [];
+                    return t.includes("jpg") && t.includes("png") || t.includes("jpeg") && t.includes("gif")
+                }))),
+                YAD_IS_IMG_DIALOG = e => !!(e && e.properties && e.properties.includes("openFile") && YAD_IS_IMG_FILTER(e)),
+                YAD_PICK_IMAGE = async e => {
+                    const t = [YAD_PATH.join(i.app.getAppPath(), "tools", "yad-root", "usr", "bin", "yad"), "yad"].find((e => {
+                        try {
+                            return YAD_FS.existsSync(e)
+                        } catch (t) {
+                            return "yad" === e
+                        }
+                    }));
+                    if (!t) throw new Error("yad not found");
+                    const n = ["--file-selection", "--add-preview", "--large-preview", "--width=1100", "--height=760", `--title=${e.title||"Chon hinh anh"}`, "--file-filter=Images | *.jpg *.jpeg *.png *.gif *.webp *.bmp", "--separator=\n"];
+                    e.properties && e.properties.includes("multiSelections") && n.push("--multiple");
+                    if (e.defaultPath) {
+                        let t = e.defaultPath;
+                        try {
+                            YAD_FS.existsSync(t) && YAD_FS.statSync(t).isDirectory() && (t = YAD_PATH.join(t, YAD_PATH.sep))
+                        } catch (r) {}
+                        n.push(`--filename=${t}`)
+                    }
+                    try {
+                        const {
+                            stdout: e
+                        } = await YAD_EXEC(t, n, {
+                            env: process.env,
+                            maxBuffer: 1048576
+                        });
+                        return {
+                            canceled: !1,
+                            filePaths: e.split(/\r?\n/).map((e => e.trim())).filter(Boolean)
+                        }
+                    } catch (r) {
+                        if (0 !== r.code) return {
+                            canceled: !0,
+                            filePaths: []
+                        };
+                        throw r
+                    }
+                },
                 p = {
                     minimize: (e, t) => {
                         const n = Object(a.b)(e.sender, t);
@@ -40171,6 +40222,7 @@ __ZaBUNDLENAME__ = "main", __SCRIPT_TYPE__ = "main",
                     showOpenDialog: (e, t) => {
                         let n = i.BrowserWindow.getFocusedWindow();
                         n || (n = i.BrowserWindow.fromWebContents(e.sender));
+                        if (YAD_IS_IMG_DIALOG(t)) return YAD_PICK_IMAGE(t).catch((e => (u.zsymb(18, "yadImg", "yad image picker failed", null == e ? void 0 : e.message), i.dialog.showOpenDialog(n, t))));
                         const r = i.dialog.showOpenDialog(n, t);
                         return r.then((e => e.filePaths.map((e => Object(s.b)(e))))), r
                     },
@@ -111266,13 +111318,13 @@ __ZaBUNDLENAME__ = "main", __SCRIPT_TYPE__ = "main",
                     } else b.zsymb(4, "j6XdDX", ["LogNetError: not invalid details", "SlxDQQ"])
                 },
                 onLoginSuccess: function() {
-                    Ue = null, b.zsymb(15, "lI8a1K", ["login success", "GRl0dA"]), Kt(Ae, {
+                    Ue = null, b.zsymb(15, "lI8a1K", ["login success", "GRl0dA"]), Ae.webContents.once("did-finish-load", (() => {
+                        b.zsymb(4, "onrDUC", ["[MAIN] [MULTI-WINDOW] [INFO] webContents did-finish-load", "jBvJRA"]), b.zsymb(4, "JQPeMg", ["qos::send-signal, login-success", "a-h5E3"]), Ae.webContents.send("login-success"), Je && (Je = !1, Ae.webContents.reload())
+                    })), Kt(Ae, {
                         already_login: "y",
                         new_install_success: !!je,
                         install_source: He
-                    }), Ae.webContents.once("did-finish-load", (() => {
-                        b.zsymb(4, "onrDUC", ["[MAIN] [MULTI-WINDOW] [INFO] webContents did-finish-load", "jBvJRA"]), b.zsymb(4, "JQPeMg", ["qos::send-signal, login-success", "a-h5E3"]), Ae.webContents.send("login-success"), Je && (Je = !1, Ae.webContents.reload())
-                    })), setTimeout((() => {
+                    }), setTimeout((() => {
                         Le && Ae && Ae.webContents.send("binary-updated", Le)
                     }), 2e3)
                 },

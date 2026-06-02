@@ -7,43 +7,149 @@ try {
     });
 } catch(_) {}
 window.addEventListener('DOMContentLoaded', () => {
-    async function tryPasteImage() {
-        if (!window.$zelectronNative) return;
+    const imageExts = ['png','jpg','jpeg','gif','webp','bmp','tiff','tif','avif','jxl'];
+
+    function fileUriToPath(uri) {
+        if (!uri || typeof uri !== 'string') return '';
+        let value = uri.trim();
+        if (!value || value.startsWith('#')) return '';
+        if (!value.startsWith('file://')) return '';
         try {
-            let file = null;
+            value = decodeURIComponent(value);
+        } catch (_) {}
+        return value.replace(/^file:\/+/, '/');
+    }
+
+    function getDroppedFilePaths(dataTransfer) {
+        if (!dataTransfer) return [];
+        const raw = [
+            dataTransfer.getData && dataTransfer.getData('text/uri-list'),
+            dataTransfer.getData && dataTransfer.getData('text/plain')
+        ].filter(Boolean).join('\n');
+        return raw.split(/\r?\n/)
+            .map(fileUriToPath)
+            .filter(Boolean)
+            .filter((path, index, list) => list.indexOf(path) === index);
+    }
+
+    function isImagePath(filePath) {
+        const ext = (filePath.split('.').pop() || '').toLowerCase();
+        return imageExts.includes(ext);
+    }
+
+    function pathToFileUrl(filePath) {
+        return 'file://' + filePath.split('/').map(part => encodeURIComponent(part)).join('/');
+    }
+
+    async function fileFromPath(filePath) {
+        try {
+            const _fs = require('fs');
+            const buf = _fs.readFileSync(filePath);
+            const ext = (filePath.split('.').pop() || '').toLowerCase();
+            let mimeType = 'image/png';
+            if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+            else if (ext === 'gif') mimeType = 'image/gif';
+            else if (ext === 'webp') mimeType = 'image/webp';
+            else if (ext === 'bmp') mimeType = 'image/bmp';
+            
+            const file = new File([buf], filePath.split('/').pop(), { type: mimeType });
+            try {
+                Object.defineProperty(file, 'path', { value: filePath });
+            } catch (_) {}
+            return file;
+        } catch (e) {
+            const res = await fetch(pathToFileUrl(filePath));
+            const blob = await res.blob();
+            const file = new File([blob], filePath.split('/').pop(), { type: blob.type || 'application/octet-stream' });
+            try {
+                Object.defineProperty(file, 'path', { value: filePath });
+            } catch (_) {}
+            return file;
+        }
+    }
+
+    function getDropTarget(originalTarget) {
+        const overlay = document.getElementById('dragOverlayInputbox');
+        if (overlay) {
+            overlay.style.display = 'block';
+            return overlay;
+        }
+        return originalTarget || document.body;
+    }
+
+    function replayDrop(files, originalTarget) {
+        const dt = new DataTransfer();
+        files.forEach(file => dt.items.add(file));
+        const target = getDropTarget(originalTarget);
+        window.__zaloLinuxReplayingDrop = true;
+        target.dispatchEvent(new DragEvent('dragenter', { dataTransfer: dt, bubbles: true, cancelable: true }));
+        target.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+        target.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+        setTimeout(() => { window.__zaloLinuxReplayingDrop = false; }, 0);
+    }
+
+    async function tryPasteImage() {
+        if (!window.$zelectronNative) return false;
+        try {
+            let files = [];
             const b64 = window.$zelectronNative.getClipboardImagePNG && window.$zelectronNative.getClipboardImagePNG();
             if (b64) {
                 const binary = atob(b64);
                 const bytes = new Uint8Array(binary.length);
                 for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                file = new File([bytes], 'image.png', { type: 'image/png' });
+                files = [new File([bytes], 'image.png', { type: 'image/png' })];
             } else {
                 const filePath = window.$zelectronNative.getClipboardFilePath && window.$zelectronNative.getClipboardFilePath();
-                if (!filePath) return;
-                const ext = filePath.split('.').pop().toLowerCase();
-                const imageExts = ['png','jpg','jpeg','gif','webp','bmp','tiff','tif','avif','jxl'];
-                if (!imageExts.includes(ext)) return;
-                const res = await fetch('file://' + filePath);
-                const blob = await res.blob();
-                file = new File([blob], filePath.split('/').pop(), { type: blob.type || 'image/png' });
+                let paths = [];
+                if (filePath) paths = [filePath];
+                if (!paths.length && window.$zelectronNative.getClipboardText) {
+                    paths = window.$zelectronNative.getClipboardText().split(/\r?\n/)
+                        .map(fileUriToPath)
+                        .filter(Boolean);
+                }
+                paths = paths
+                    .filter(isImagePath)
+                    .filter((path, index, list) => list.indexOf(path) === index);
+                if (!paths.length) return false;
+                files = await Promise.all(paths.map(fileFromPath));
             }
-            if (!file) return;
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            const target = document.getElementById('dragOverlayInputbox');
-            if (!target) return;
-            target.style.display = 'block';
-            target.dispatchEvent(new DragEvent('dragenter', { dataTransfer: dt, bubbles: true }));
-            target.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true }));
-            target.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
-        } catch(err) {}
+            if (!files.length) return false;
+            replayDrop(files);
+            return true;
+        } catch(err) {
+            return false;
+        }
     }
     let _lastPaste = 0;
     document.addEventListener('paste', async (e) => {
         const now = Date.now();
         if (now - _lastPaste < 200) return;
         _lastPaste = now;
-        await tryPasteImage();
+        if (await tryPasteImage()) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }
+    }, true);
+
+    document.addEventListener('dragover', (e) => {
+        if (window.__zaloLinuxReplayingDrop) return;
+        const paths = getDroppedFilePaths(e.dataTransfer);
+        if (!paths.some(isImagePath)) return;
+        e.preventDefault();
+    }, true);
+
+    document.addEventListener('drop', async (e) => {
+        if (window.__zaloLinuxReplayingDrop) return;
+        const hasNativeFiles = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0;
+        if (hasNativeFiles) return;
+        const paths = getDroppedFilePaths(e.dataTransfer).filter(isImagePath);
+        if (!paths.length) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        try {
+            const files = await Promise.all(paths.map(fileFromPath));
+            replayDrop(files, e.target);
+        } catch (_) {}
     }, true);
 });
 __ZaBUNDLENAME__ = "preload-render", __SCRIPT_TYPE__ = "preload",
@@ -5291,17 +5397,45 @@ __ZaBUNDLENAME__ = "preload-render", __SCRIPT_TYPE__ = "preload",
                     },
                     getClipboardImagePNG: () => {
                         let e = r.clipboard.readImage();
-                        if (e.isEmpty()) { try { const buf = r.clipboard.readBuffer("image/png"); if (buf && buf.length > 0) { e = r.nativeImage.createFromBuffer(buf); } } catch(_) {} }
+                        if (e.isEmpty()) {
+                            const mimeTypes = ["image/png", "image/jpeg", "image/jpg", "image/bmp", "image/x-bmp", "image/x-MS-bmp", "image/gif"];
+                            for (const mime of mimeTypes) {
+                                try {
+                                    const buf = r.clipboard.readBuffer(mime);
+                                    if (buf && buf.length > 0) {
+                                        e = r.nativeImage.createFromBuffer(buf);
+                                        if (!e.isEmpty()) break;
+                                    }
+                                } catch(_) {}
+                            }
+                        }
                         if (e.isEmpty()) return null;
                         return e.toPNG().toString('base64');
                     },
                     getClipboardFilePath: () => {
                         try {
-                            const { execSync } = require('child_process');
-                            const text = execSync('wl-paste --type text/uri-list 2>/dev/null', { timeout: 1000 }).toString().trim();
+                            const readBufferText = t => {
+                                try {
+                                    const e = r.clipboard.readBuffer(t);
+                                    return e && e.length ? e.toString().trim() : "";
+                                } catch (_) {
+                                    return "";
+                                }
+                            };
+                            let text = [
+                                r.clipboard.readText(),
+                                readBufferText("text/uri-list"),
+                                readBufferText("x-special/gnome-copied-files")
+                            ].filter(Boolean).join("\n").trim();
+                            if (!text) {
+                                try {
+                                    const { execSync } = require('child_process');
+                                    text = execSync('wl-paste --type text/uri-list 2>/dev/null', { timeout: 1000 }).toString().trim();
+                                } catch (_) {}
+                            }
                             if (!text) return null;
-                            const uri = text.split('\n')[0].trim();
-                            if (!uri.startsWith('file://')) return null;
+                            const uri = text.split(/\r?\n/).map((e => e.trim())).find((e => e.startsWith("file://")));
+                            if (!uri) return null;
                             return decodeURIComponent(uri.replace('file://', ''));
                         } catch(_) { return null; }
                     },
@@ -5310,7 +5444,18 @@ __ZaBUNDLENAME__ = "preload-render", __SCRIPT_TYPE__ = "preload",
                         try {
                             const _fs = require('fs'), _os = require('os'), _path = require('path');
                             let e = r.clipboard.readImage();
-                            if (e.isEmpty()) { try { const buf = r.clipboard.readBuffer("image/png"); if (buf && buf.length > 0) { e = r.nativeImage.createFromBuffer(buf); } } catch(_) {} }
+                            if (e.isEmpty()) {
+                                const mimeTypes = ["image/png", "image/jpeg", "image/jpg", "image/bmp", "image/x-bmp", "image/x-MS-bmp", "image/gif"];
+                                for (const mime of mimeTypes) {
+                                    try {
+                                        const buf = r.clipboard.readBuffer(mime);
+                                        if (buf && buf.length > 0) {
+                                            e = r.nativeImage.createFromBuffer(buf);
+                                            if (!e.isEmpty()) break;
+                                        }
+                                    } catch(_) {}
+                                }
+                            }
                             if (e.isEmpty()) return null;
                             const tmpPath = _path.join(_os.tmpdir(), "zalo_clip_" + Date.now() + ".png");
                             _fs.writeFileSync(tmpPath, e.toPNG());

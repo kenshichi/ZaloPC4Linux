@@ -6,6 +6,7 @@ INSTALL_DIR="$HOME/.local/share/zalo"
 TMP_DIR="/tmp/zalo-update-$$"
 FIFO="/tmp/zalo-update-$$.fifo"
 VERSION_URL="https://raw.githubusercontent.com/realdtn2/zalo-linux-2026/latest/version.txt"
+DEFAULT_EXCLUDE_LIST=".git .github .gitignore .agents .codex install.sh reverse-engineering generate-addon.py dist build-appimage.sh README.md COMPREHENSIVE_ANALYSIS.md"
 
 # --- CLEANUP TRAP ---
 cleanup() {
@@ -15,6 +16,7 @@ trap cleanup EXIT INT TERM
 
 # --- HELPERS ---
 command_exists() { command -v "$1" >/dev/null 2>&1; }
+bundled_yad_exists() { [ -x "$INSTALL_DIR/tools/yad-root/usr/bin/yad" ]; }
 print_step() { echo ""; echo ">>> $1"; }
 
 # --- SEMVER COMPARE ---
@@ -36,26 +38,26 @@ version_lt() {
 
 # --- DEPENDENCY INSTALL ---
 install_dependencies() {
-    print_step "Installing missing dependencies: git curl zenity..."
+    print_step "Installing missing dependencies: git curl zenity yad..."
     if command_exists apt-get; then
-        sudo apt-get update -y && sudo apt-get install -y git curl zenity
+        sudo apt-get update -y && sudo apt-get install -y git curl zenity yad
     elif command_exists dnf; then
-        sudo dnf install -y git curl zenity
+        sudo dnf install -y git curl zenity yad
     elif command_exists yum; then
-        sudo yum install -y git curl zenity
+        sudo yum install -y git curl zenity yad
     elif command_exists pacman; then
-        sudo pacman -Sy --noconfirm git curl zenity
+        sudo pacman -Sy --noconfirm git curl zenity yad
     elif command_exists zypper; then
-        sudo zypper install -y git curl zenity
+        sudo zypper install -y git curl zenity yad
     elif command_exists apk; then
-        sudo apk add git curl zenity
+        sudo apk add git curl zenity yad
     elif command_exists xbps-install; then
-        sudo xbps-install -Sy git curl zenity
+        sudo xbps-install -Sy git curl zenity yad
     elif command_exists emerge; then
-        sudo emerge --ask=n dev-vcs/git net-misc/curl gnome-extra/zenity
+        sudo emerge --ask=n dev-vcs/git net-misc/curl gnome-extra/zenity x11-misc/yad
     else
         echo "ERROR: No supported package manager found."
-        echo "Please manually install 'git', 'curl', and 'zenity', then re-run this script."
+        echo "Please manually install 'git', 'curl', 'zenity', and 'yad', then re-run this script."
         exit 1
     fi
 }
@@ -65,6 +67,7 @@ MISSING=0
 command_exists git    || MISSING=1
 command_exists curl   || MISSING=1
 command_exists zenity || MISSING=1
+command_exists yad || bundled_yad_exists || MISSING=1
 [ "$MISSING" -eq 1 ] && install_dependencies
 
 # --- VERSION CHECK ---
@@ -101,8 +104,9 @@ mkfifo "$FIFO"
         exit 1
     fi
 
-    # Read EXCLUDE_LIST from the freshly cloned start.sh
-    EXCLUDE_LIST="$(grep -m1 '^EXCLUDE_LIST=' "$TMP_DIR/start.sh" | cut -d'"' -f2)"
+    # Read EXCLUDE_LIST from the freshly cloned installer.
+    EXCLUDE_LIST="$(grep -m1 '^EXCLUDE_LIST=' "$TMP_DIR/install.sh" | cut -d'"' -f2)"
+    [ -n "$EXCLUDE_LIST" ] || EXCLUDE_LIST="$DEFAULT_EXCLUDE_LIST"
 
     print_step "Updating app files in $INSTALL_DIR..."
     cd "$TMP_DIR" || exit 1

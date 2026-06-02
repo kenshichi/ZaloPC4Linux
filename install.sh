@@ -10,34 +10,35 @@ ICON_DEST="$HOME/.local/share/icons/zalo.png"
 
 # Files/folders in the current directory that should NOT be installed.
 # Add or remove entries as you like. Use exact names (no paths, no wildcards).
-EXCLUDE_LIST=".git .github .gitignore install.sh reverse-engineering generate-addon.py dist build-appimage.sh README.md"
+EXCLUDE_LIST=".git .github .gitignore .agents .codex install.sh reverse-engineering generate-addon.py dist build-appimage.sh README.md COMPREHENSIVE_ANALYSIS.md"
 
 # --- HELPERS ---
 command_exists() { command -v "$1" >/dev/null 2>&1; }
+bundled_yad_exists() { [ -x "./tools/yad-root/usr/bin/yad" ]; }
 print_step() { echo ""; echo ">>> $1"; }
 
 # --- DEPENDENCY INSTALL ---
 install_dependencies() {
-    print_step "Installing missing dependencies: wget unzip curl git zenity..."
+    print_step "Installing missing dependencies: wget unzip curl git zenity yad..."
     if command_exists apt-get; then
-        sudo apt-get update -y && sudo apt-get install -y wget unzip curl git zenity
+        sudo apt-get update -y && sudo apt-get install -y wget unzip curl git zenity yad
     elif command_exists dnf; then
-        sudo dnf install -y wget unzip curl git zenity
+        sudo dnf install -y wget unzip curl git zenity yad
     elif command_exists yum; then
-        sudo yum install -y wget unzip curl git zenity
+        sudo yum install -y wget unzip curl git zenity yad
     elif command_exists pacman; then
-        sudo pacman -Sy --noconfirm wget unzip curl git zenity
+        sudo pacman -Sy --noconfirm wget unzip curl git zenity yad
     elif command_exists zypper; then
-        sudo zypper install -y wget unzip curl git zenity
+        sudo zypper install -y wget unzip curl git zenity yad
     elif command_exists apk; then
-        sudo apk add wget unzip curl git zenity
+        sudo apk add wget unzip curl git zenity yad
     elif command_exists xbps-install; then
-        sudo xbps-install -Sy wget unzip curl git zenity
+        sudo xbps-install -Sy wget unzip curl git zenity yad
     elif command_exists emerge; then
-        sudo emerge --ask=n net-misc/wget app-arch/unzip net-misc/curl dev-vcs/git gnome-extra/zenity
+        sudo emerge --ask=n net-misc/wget app-arch/unzip net-misc/curl dev-vcs/git gnome-extra/zenity x11-misc/yad
     else
         echo "ERROR: No supported package manager found."
-        echo "Please manually install 'wget', 'unzip', 'curl', 'git', and 'zenity', then re-run this script."
+        echo "Please manually install 'wget', 'unzip', 'curl', 'git', 'zenity', and 'yad', then re-run this script."
         exit 1
     fi
 }
@@ -49,6 +50,7 @@ command_exists unzip  || MISSING=1
 command_exists curl   || MISSING=1
 command_exists git    || MISSING=1
 command_exists zenity || MISSING=1
+command_exists yad || bundled_yad_exists || MISSING=1
 [ "$MISSING" -eq 1 ] && install_dependencies
 
 # --- CLEAN PREVIOUS INSTALL ---
