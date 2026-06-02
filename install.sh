@@ -108,33 +108,36 @@ cat > "$DESKTOP_DIR/$APP_NAME.desktop" <<DESK
 [Desktop Entry]
 Name=$APP_NAME
 Comment=Zalo Messenger
-Exec=bash $INSTALL_DIR/start.sh
+Exec=/usr/bin/env -u ELECTRON_RUN_AS_NODE /usr/bin/bash $INSTALL_DIR/start.sh
+Path=$INSTALL_DIR
 Icon=$ICON_DEST
 Terminal=false
 Type=Application
 Categories=Network;InstantMessaging;
 StartupWMClass=Zalo
+MimeType=x-scheme-handler/zalo;text/html;
 DESK
 
 cat > "$DESKTOP_DIR/${APP_NAME}Update.desktop" <<DESK
 [Desktop Entry]
 Name=Update $APP_NAME
 Comment=Update Zalo to the latest version
-Exec=bash $INSTALL_DIR/update.sh
+Exec=/usr/bin/env /usr/bin/bash $INSTALL_DIR/update.sh
+Path=$INSTALL_DIR
 Icon=$ICON_DEST
 Terminal=false
 Type=Application
 Categories=Network;InstantMessaging;
 DESK
 
-chmod +x "$DESKTOP_DIR/$APP_NAME.desktop"
-chmod +x "$DESKTOP_DIR/${APP_NAME}Update.desktop"
+chmod 755 "$DESKTOP_DIR/$APP_NAME.desktop"
+chmod 755 "$DESKTOP_DIR/${APP_NAME}Update.desktop"
 
 if [ -d "$HOME/Desktop" ]; then
     cp "$DESKTOP_DIR/$APP_NAME.desktop"         "$HOME/Desktop/$APP_NAME.desktop"
     cp "$DESKTOP_DIR/${APP_NAME}Update.desktop" "$HOME/Desktop/${APP_NAME}Update.desktop"
-    chmod +x "$HOME/Desktop/$APP_NAME.desktop"
-    chmod +x "$HOME/Desktop/${APP_NAME}Update.desktop"
+    chmod 755 "$HOME/Desktop/$APP_NAME.desktop"
+    chmod 755 "$HOME/Desktop/${APP_NAME}Update.desktop"
     if command_exists gio; then
         gio set "$HOME/Desktop/$APP_NAME.desktop"         metadata::trusted true 2>/dev/null || true
         gio set "$HOME/Desktop/${APP_NAME}Update.desktop" metadata::trusted true 2>/dev/null || true
