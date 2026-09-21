@@ -1,13 +1,17 @@
+
+
 function getLib() {
 
     let addon = null;
-    if (process.platform === 'win32') {
-        if (process.arch === 'x64') {
+    if(process.platform === 'win32') {
+        if(process.arch === 'x64') {
             addon = require('./win64/addon');
-        } else {
+        }
+        else {
             addon = require('./win32/addon');
         }
-    } else {
+    }
+    else {
         return {
             stat: () => {},
             diskInfo: () => {},
@@ -85,7 +89,7 @@ function getLib() {
     const canWrite = (path) => {
         return addon.canWrite(path);
     }
-
+    
     return {
         stat,
         diskInfo,
