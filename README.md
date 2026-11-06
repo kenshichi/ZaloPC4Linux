@@ -1,4 +1,4 @@
-# Zalo Linux Port 2026
+# Zalo Linux 2026
 ⚠️ **Work in Progress** - This project is under active development.
 A Linux port of Zalo, bringing the popular Vietnamese messaging application to the Linux platform.
 
